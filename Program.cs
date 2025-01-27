@@ -2,6 +2,7 @@
 using UglyToad.PdfPig;
 using System;
 using System.Globalization;
+using System.Text;
 
 const string TicketsFolder = @"C:\Users\Max\source\repos\TicketsDataAggregator\Tickets";
 
@@ -45,6 +46,8 @@ public class TicketAggregator
 
     public void Run()
     {
+        var stringBuilder = new StringBuilder();
+
         foreach (var filePath in Directory.GetFiles(
             _ticketsFolder, "*.pdf"))
         {
@@ -69,8 +72,23 @@ public class TicketAggregator
                     dateAsString, new CultureInfo(ticketsCulture));
                 var time = TimeOnly.Parse(
                     timeAsString, new CultureInfo(ticketsCulture));
+
+                var dateAsStringInvariant = date
+                    .ToString(CultureInfo.InvariantCulture);
+                var timeAsStringInvariant = time
+                    .ToString(CultureInfo.InvariantCulture);
+
+                var ticketData = 
+                    $"{title, -40}|{dateAsStringInvariant}|{timeAsStringInvariant}";
+
+                stringBuilder.AppendLine(ticketData);
             }
         }
+
+        var resultPath = Path.Combine(
+            _ticketsFolder, "aggregatedTickets.txt");
+        File.WriteAllText(resultPath, stringBuilder.ToString());
+        Console.WriteLine("Results saved to " + resultPath);
     }
 
     private string ExtractDomain(string webAddress)
