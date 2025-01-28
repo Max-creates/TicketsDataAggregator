@@ -22,40 +22,49 @@ public class TicketAggregator
         [".ru"] = new CultureInfo("ru-RU"),
         [".jp"] = new CultureInfo("ja-JP"),
     };
+    private readonly IFileWriter _fileWriter;
+    private readonly IDocumentsReader _documentsReader;
 
-    public TicketAggregator(string ticketsFolder)
+    public TicketAggregator(
+        string ticketsFolder,
+        IFileWriter fileWriter,
+        IDocumentsReader documentsReader)
     {
         _ticketsFolder = ticketsFolder;
+        _fileWriter = fileWriter;
+        _documentsReader = documentsReader;
     }
 
     public void Run()
     {
         var stringBuilder = new StringBuilder();
 
-        foreach (var filePath in Directory.GetFiles(
-            _ticketsFolder, "*.pdf"))
+        var ticketDocuments = _documentsReader.Read(
+            _ticketsFolder);
+
+        foreach (var document in ticketDocuments)
         {
-            using PdfDocument document = PdfDocument.Open(filePath);
-            // Page number starts from 1, not 0.
-            Page page = document.GetPage(1);
-            var lines = ProcessPage(page);
+            var lines = ProcessDocument(document);
             stringBuilder.AppendLine(
                 string.Join(Environment.NewLine, lines));
         }
 
-        SaveTicketsData(stringBuilder);
+
+        _fileWriter.Write(
+            stringBuilder.ToString(), 
+            _ticketsFolder, "aggregatedTickets.txt");
     }
 
 
 
-    private IEnumerable<string> ProcessPage(Page page)
+    private IEnumerable<string> ProcessDocument(
+        string document)
     {
-        string text = page.Text;
-        var split = text.Split(
+        var split = document.Split(
             new[] { "Title:", "Date:", "Time:", "Visit us:" },
             StringSplitOptions.None);
 
-        var domain = ExtractDomain(split.Last());
+        var domain = split.Last().ExtractDomain();
         var ticketsCulture = _domainToCultureMapping[domain];
 
         for (int i = 1; i < split.Length - 3; i += 3)
@@ -88,16 +97,48 @@ public class TicketAggregator
             $"{title,-40}|{dateAsStringInvariant}|{timeAsStringInvariant}";
         return ticketData;
     }
+}
 
-    private void SaveTicketsData(StringBuilder stringBuilder)
+public interface IDocumentsReader
+{
+    IEnumerable<string> Read(string directory);
+}
+
+public class DocumentsFromPdfReader : IDocumentsReader
+{
+    public IEnumerable<string> Read(string directory)
     {
-        var resultPath = Path.Combine(
-                    _ticketsFolder, "aggregatedTickets.txt");
-        File.WriteAllText(resultPath, stringBuilder.ToString());
+        foreach (var filePath in Directory.GetFiles(
+            directory, "*.pdf"))
+        {
+            using PdfDocument document = PdfDocument.Open(filePath);
+            // Page number starts from 1, not 0.
+            Page page = document.GetPage(1);
+            yield return page.Text;
+        }
+    }
+}
+
+public interface IFileWriter
+{
+    void Write(
+        string content, params string[] pathParts);
+}
+
+public class FileWriter : IFileWriter
+{
+    public void Write(string content, params string[] pathParts)
+    {
+        var resultPath = Path.Combine(pathParts);
+        File.WriteAllText(resultPath, content);
         Console.WriteLine("Results saved to " + resultPath);
     }
+}
 
-    private static string ExtractDomain(string webAddress)
+public static class  WebAddressExtension
+{
+        public static string ExtractDomain(
+            this string webAddress)
     {
         var lastDotIndex = webAddress.LastIndexOf('.');
         return webAddress.Substring(lastDotIndex);

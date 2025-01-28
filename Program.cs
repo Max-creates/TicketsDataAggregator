@@ -6,7 +6,9 @@ const string TicketsFolder = @"C:\Users\Max\source\repos\TicketsDataAggregator\T
 try
 {
     var ticketAggregator = new TicketAggregator(
-        TicketsFolder);
+        TicketsFolder,
+        new FileWriter(),
+        new DocumentsFromPdfReader());
 
     ticketAggregator.Run();
 }
