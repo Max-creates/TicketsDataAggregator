@@ -1,12 +1,12 @@
-﻿using UglyToad.PdfPig.Content;
-using UglyToad.PdfPig;
-using System.Globalization;
+﻿using System.Globalization;
 using System.Text;
+using TicketsDataAggregator.Extensions;
+using TicketsDataAggregator.FileAccess;
 
-namespace TicketsDataAggregator.TicketDataAggregation;
+namespace TicketsDataAggregator.TicketsAggregation;
 
 
-public class TicketAggregator
+public class TicketsAggregator
 {
     private readonly string _ticketsFolder;
     private readonly Dictionary<string, CultureInfo> _domainToCultureMapping = new()
@@ -25,7 +25,7 @@ public class TicketAggregator
     private readonly IFileWriter _fileWriter;
     private readonly IDocumentsReader _documentsReader;
 
-    public TicketAggregator(
+    public TicketsAggregator(
         string ticketsFolder,
         IFileWriter fileWriter,
         IDocumentsReader documentsReader)
@@ -51,7 +51,7 @@ public class TicketAggregator
 
 
         _fileWriter.Write(
-            stringBuilder.ToString(), 
+            stringBuilder.ToString(),
             _ticketsFolder, "aggregatedTickets.txt");
     }
 
@@ -96,51 +96,5 @@ public class TicketAggregator
         var ticketData =
             $"{title,-40}|{dateAsStringInvariant}|{timeAsStringInvariant}";
         return ticketData;
-    }
-}
-
-public interface IDocumentsReader
-{
-    IEnumerable<string> Read(string directory);
-}
-
-public class DocumentsFromPdfReader : IDocumentsReader
-{
-    public IEnumerable<string> Read(string directory)
-    {
-        foreach (var filePath in Directory.GetFiles(
-            directory, "*.pdf"))
-        {
-            using PdfDocument document = PdfDocument.Open(filePath);
-            // Page number starts from 1, not 0.
-            Page page = document.GetPage(1);
-            yield return page.Text;
-        }
-    }
-}
-
-public interface IFileWriter
-{
-    void Write(
-        string content, params string[] pathParts);
-}
-
-public class FileWriter : IFileWriter
-{
-    public void Write(string content, params string[] pathParts)
-    {
-        var resultPath = Path.Combine(pathParts);
-        File.WriteAllText(resultPath, content);
-        Console.WriteLine("Results saved to " + resultPath);
-    }
-}
-
-public static class  WebAddressExtension
-{
-        public static string ExtractDomain(
-            this string webAddress)
-    {
-        var lastDotIndex = webAddress.LastIndexOf('.');
-        return webAddress.Substring(lastDotIndex);
     }
 }

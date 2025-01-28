@@ -1,11 +1,11 @@
-﻿using System;
-using TicketsDataAggregator.TicketDataAggregation;
+﻿using TicketsDataAggregator.TicketsAggregation;
+using TicketsDataAggregator.FileAccess;
 
 const string TicketsFolder = @"C:\Users\Max\source\repos\TicketsDataAggregator\Tickets";
 
 try
 {
-    var ticketAggregator = new TicketAggregator(
+    var ticketAggregator = new TicketsAggregator(
         TicketsFolder,
         new FileWriter(),
         new DocumentsFromPdfReader());
